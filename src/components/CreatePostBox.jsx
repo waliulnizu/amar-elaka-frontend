@@ -9,6 +9,10 @@ export default function CreatePostBox({ user, onPostCreated }) {
   const [category, setCategory] = useState("সাধারণ");
   const [reach, setReach] = useState("থানা"); 
   
+  // ➕ নতুন: ট্যাগ এবং সমাধানের ডেডলাইনের জন্য স্টেট
+  const [taggedAuthorities, setTaggedAuthorities] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +62,12 @@ export default function CreatePostBox({ user, onPostCreated }) {
     formData.append("category", category);
     formData.append("reach", reach); 
     
+    // 🚀 ম্যাজিক: ক্যাটাগরি 'সমস্যা' হলেই ট্যাগগুলো ব্যাকএন্ডে যাবে
+    if (category === 'সমস্যা') {
+        formData.append("taggedAuthorities", taggedAuthorities);
+        formData.append("targetDate", targetDate);
+    }
+    
     if (selectedFile) {
       formData.append("post-img", selectedFile);
     }
@@ -71,9 +81,12 @@ export default function CreatePostBox({ user, onPostCreated }) {
 
       alert(response.data.message);
       
+      // পোস্ট সফল হলে সবকিছু মুছে ফ্রেশ করে দেওয়া
       setContent("");
       setCategory("সাধারণ");
       setReach("থানা"); 
+      setTaggedAuthorities(""); 
+      setTargetDate("");
       handleRemoveImage();
 
       if (onPostCreated) {
@@ -91,10 +104,8 @@ export default function CreatePostBox({ user, onPostCreated }) {
     <div className="w-full bg-base-100 shadow-md rounded-xl p-4 md:p-5 border border-base-300 mb-6 transition-all hover:shadow-lg">
       <form onSubmit={handleSubmit}>
         
-        {/* প্রোফাইল ছবি এবং লেখার জায়গা */}
         <div className="flex gap-3 items-start mb-2">
           
-          {/* 🟢 ফিক্সড: Avatar Shrink Issue (shrink-0 এবং min-w দেওয়া হয়েছে) */}
           <div className="w-10 h-10 min-w-[40px] rounded-full ring-1 ring-primary/20 overflow-hidden bg-base-200 flex items-center justify-center shrink-0">
             {user?.profileImage ? (
               <img src={user.profileImage} alt="Avatar" className="w-full h-full object-cover" />
@@ -103,10 +114,8 @@ export default function CreatePostBox({ user, onPostCreated }) {
             )}
           </div>
           
-          {/* 🟢 ফিক্সড: লেখার জায়গা এখন অনেক বড় এবং ড্রপডাউন নিচে চলে গেছে */}
           <div className="w-full flex flex-col gap-3 mt-1">
             
-            {/* 🟢 ফিক্সড: ডায়নামিক প্লেসহোল্ডার (reach এর মান অনুযায়ী পাল্টে যাবে) */}
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -115,7 +124,6 @@ export default function CreatePostBox({ user, onPostCreated }) {
               disabled={isSubmitting}
             />
             
-            {/* 🟢 ফিক্সড: মডার্ন টুলবার (ক্যাটাগরি এবং রিচ ড্রপডাউন) */}
             <div className="flex flex-wrap gap-2">
               <select 
                 value={category} 
@@ -128,7 +136,6 @@ export default function CreatePostBox({ user, onPostCreated }) {
                 <option value="সাহায্য">🤝 সাহায্য (Help)</option>
                 <option value="রক্তদান">🩸 রক্তদান (Blood)</option>
                 <option value="অনুষ্ঠান">🎉 অনুষ্ঠান (Event)</option>
-                {/* নতুন ক্যাটাগরিগুলো যুক্ত করা হলো */}
                 <option value="সমস্যা">🚨 সমস্যা (Issue)</option>
                 <option value="জন্ম">👶 জন্ম (Birth)</option>
                 <option value="মৃত্যু">🕊️ মৃত্যু (Death)</option>
@@ -148,10 +155,41 @@ export default function CreatePostBox({ user, onPostCreated }) {
               </select>
             </div>
 
+            {/* 🚀 ম্যাজিক: ডায়নামিক ট্যাগিং বক্স (শুধু সমস্যা সিলেক্ট করলেই আসবে) */}
+            {category === 'সমস্যা' && (
+                <div className="mt-2 p-4 bg-error/5 border border-error/20 rounded-lg flex flex-col gap-4 animate-fade-in">
+                    <div className="text-sm font-bold text-error flex items-center gap-2">
+                       🚨 সমস্যার বিস্তারিত তথ্য দিন
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-gray-600">কাকে ট্যাগ করবেন? (কমা দিয়ে লিখুন)</label>
+                            <input 
+                                type="text" 
+                                placeholder="যেমন: চেয়ারম্যান, পল্লী বিদ্যুৎ" 
+                                value={taggedAuthorities}
+                                onChange={(e) => setTaggedAuthorities(e.target.value)}
+                                className="input input-sm input-bordered focus:border-error focus:ring-1 focus:ring-error w-full text-sm bg-white"
+                            />
+                        </div>
+                        
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-gray-600">সমাধানের শেষ সময় (Optional)</label>
+                            <input 
+                                type="date" 
+                                value={targetDate}
+                                onChange={(e) => setTargetDate(e.target.value)}
+                                className="input input-sm input-bordered focus:border-error focus:ring-1 focus:ring-error w-full text-sm bg-white text-gray-600"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
           </div>
         </div>
 
-        {/* 🟢 ফিক্সড: ইমেজের শেপ ঠিক রাখা (object-contain) */}
         {imagePreview && (
           <div className="relative rounded-lg overflow-hidden border border-base-200 mt-3 mb-4 bg-black/5 flex justify-center items-center">
             <img src={imagePreview} alt="Preview" className="max-h-[250px] object-contain w-full" />

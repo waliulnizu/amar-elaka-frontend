@@ -212,20 +212,33 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* ফলো / জানতে ইচ্ছুক বাটন */}
+                      {/* ফলো / জানতে ইচ্ছুক বাটন (রিয়েল-টাইম কাউন্টিং ফিক্সড) */}
                       <button
                         onClick={async () => {
                           try {
+                            // ১. ব্যাকএন্ডে রিকোয়েস্ট পাঠানো
                             const res = await axios.put(`http://localhost:5000/api/posts/${post._id}/follow`, {}, { withCredentials: true });
+
+                            // ২. ম্যাজিক লজিক: ম্যাপ লুপ চালিয়ে নির্দিষ্ট পোস্টের ফলোয়ার অ্যারে সরাসরি আপডেট করা
+                            setPosts((prevPosts) =>
+                              prevPosts.map((p) =>
+                                p._id === post._id ? { ...p, followers: res.data.followers } : p
+                              )
+                            );
+
                             alert(res.data.message);
-                            // রিয়েল প্রজেক্টে এখানে স্টেট আপডেট করে বাটনের স্টাইল চেঞ্জ করতে হবে
                           } catch (error) {
-                            alert("সমস্যা হয়েছে!");
+                            console.error("Follow error:", error);
+                            alert("ফলো করতে সমস্যা হয়েছে!");
                           }
                         }}
-                        className="btn btn-sm bg-warning/20 text-warning-content hover:bg-warning hover:text-white border-none rounded-full px-4 shadow-sm"
+                        // ডায়নামিক ক্লাস: কারেন্ট ইউজার যদি অলরেডি ফলো করে রাখে তবে বাটন হাইলাইট বা সলিড কালার হবে
+                        className={`btn btn-sm border-none rounded-full px-4 shadow-sm transition-all ${post.followers?.includes(userData?.id || userData?._id)
+                            ? "bg-warning text-white hover:bg-warning/80"
+                            : "bg-warning/20 text-warning-content hover:bg-warning hover:text-white"
+                          }`}
                       >
-                        🔔 জানতে ইচ্ছুক ({post.followers?.length || 0})
+                        🔔 {post.followers?.includes(userData?.id || userData?._id) ? "জানানো হবে" : "জানতে ইচ্ছুক"} ({post.followers?.length || 0})
                       </button>
 
                     </div>
