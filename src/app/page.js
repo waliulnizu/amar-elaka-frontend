@@ -4,15 +4,15 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar"; 
-import CreatePostBox from "@/components/CreatePostBox"; 
+import Navbar from "@/components/Navbar";
+import CreatePostBox from "@/components/CreatePostBox";
 
 export default function HomePage() {
   const [userData, setUserData] = useState(null);
   const [posts, setPosts] = useState([]); // ➕ নতুন যোগ হলো: নিউজফিডের সব পোস্ট রাখার স্টেট
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   const router = useRouter();
   const fileInputRef = useRef(null);
 
@@ -27,7 +27,7 @@ export default function HomePage() {
           withCredentials: true,
           timeout: 5000
         });
-        
+
         if (isMounted) {
           setUserData(profileRes.data.user);
         }
@@ -100,9 +100,9 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-base-200">
       <Navbar user={userData} />
-      
+
       <div className="flex-1 p-4 md:p-8 max-w-4xl w-full mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        
+
         {/* বাম পাশের কলাম: প্রোফাইল কার্ড */}
         <div className="md:col-span-1 bg-base-100 shadow-xl rounded-xl p-6 flex flex-col items-center border border-base-300 sticky top-4">
           <div className="relative group mb-4">
@@ -140,14 +140,14 @@ export default function HomePage() {
 
         {/* ডান পাশের কলাম: পোস্ট বক্স এবং লাইভ নিউজফিড */}
         <div className="md:col-span-2 w-full flex flex-col gap-4">
-          
+
           {/* 🧠 Developer Concept: ইউজার যখনই কোনো নতুন পোস্ট সাবমিট করবে, 
               আমরা [newPost, ...prevPosts] মেথড দিয়ে পেজ রিফ্লেশ ছাড়াই সেটিকে লিস্টের সবার ওপরে ঠেলে দেব। */}
-          <CreatePostBox 
-            user={userData} 
+          <CreatePostBox
+            user={userData}
             onPostCreated={(newPost) => {
               setPosts((prevPosts) => [newPost, ...prevPosts]);
-            }} 
+            }}
           />
 
           {/* 📰 লাইভ নিউজফিড লিস্ট (Newsfeed List) */}
@@ -160,7 +160,7 @@ export default function HomePage() {
               // লুপ চালিয়ে প্রতিটি পোস্টকে সুন্দর ফেসবুক স্টাইল কার্ডে কনভার্ট করা হচ্ছে
               posts.map((post) => (
                 <div key={post._id} className="bg-base-100 shadow-md rounded-xl p-5 border border-base-300 flex flex-col gap-3 transition-all hover:shadow-lg">
-                  
+
                   {/* পোস্টের হেডার: পোস্টদাতার নাম ও ছবি */}
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-base-200 ring-1 ring-primary/20 flex items-center justify-center">
@@ -176,6 +176,14 @@ export default function HomePage() {
                       <p className="text-xs text-gray-400">
                         {new Date(post.createdAt).toLocaleDateString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
                       </p>
+                    </div>
+                    <div className={`badge badge-sm font-semibold px-3 py-2 ${post.category === 'রক্তদান' ? 'badge-error text-white' :
+                        post.category === 'ব্যবসা' ? 'badge-info text-white' :
+                          post.category === 'সাহায্য' ? 'badge-warning' :
+                            post.category === 'অনুষ্ঠান' ? 'badge-success text-white' :
+                              'badge-ghost bg-base-200'
+                      }`}>
+                      {post.category || 'সাধারণ'}
                     </div>
                   </div>
 
