@@ -178,10 +178,10 @@ export default function HomePage() {
                       </p>
                     </div>
                     <div className={`badge badge-sm font-semibold px-3 py-2 ${post.category === 'রক্তদান' ? 'badge-error text-white' :
-                        post.category === 'ব্যবসা' ? 'badge-info text-white' :
-                          post.category === 'সাহায্য' ? 'badge-warning' :
-                            post.category === 'অনুষ্ঠান' ? 'badge-success text-white' :
-                              'badge-ghost bg-base-200'
+                      post.category === 'ব্যবসা' ? 'badge-info text-white' :
+                        post.category === 'সাহায্য' ? 'badge-warning' :
+                          post.category === 'অনুষ্ঠান' ? 'badge-success text-white' :
+                            'badge-ghost bg-base-200'
                       }`}>
                       {post.category || 'সাধারণ'}
                     </div>
@@ -196,6 +196,38 @@ export default function HomePage() {
                   {post.postImage && (
                     <div className="rounded-lg overflow-hidden border border-base-200 max-h-[400px] bg-base-100 flex justify-center items-center">
                       <img src={post.postImage} alt="Post Attachment" className="max-h-[400px] w-full object-cover" />
+                    </div>
+                  )}
+
+                  {/* ➕ নতুন: সিভিক টেক ইন্টার‍্যাকশন বার (শুধুমাত্র সমস্যার জন্য) */}
+                  {post.category === 'সমস্যা' && (
+                    <div className="mt-3 pt-3 border-t border-base-200 flex flex-wrap gap-2 items-center justify-between bg-base-50 p-2 rounded-lg">
+
+                      <div className="text-xs text-gray-500 font-medium flex flex-col gap-1">
+                        {post.taggedAuthorities?.length > 0 && (
+                          <span><strong className="text-error">ট্যাগ:</strong> {post.taggedAuthorities.join(', ')}</span>
+                        )}
+                        {post.targetDate && (
+                          <span><strong>ডেডলাইন:</strong> {new Date(post.targetDate).toLocaleDateString('bn-BD')}</span>
+                        )}
+                      </div>
+
+                      {/* ফলো / জানতে ইচ্ছুক বাটন */}
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await axios.put(`http://localhost:5000/api/posts/${post._id}/follow`, {}, { withCredentials: true });
+                            alert(res.data.message);
+                            // রিয়েল প্রজেক্টে এখানে স্টেট আপডেট করে বাটনের স্টাইল চেঞ্জ করতে হবে
+                          } catch (error) {
+                            alert("সমস্যা হয়েছে!");
+                          }
+                        }}
+                        className="btn btn-sm bg-warning/20 text-warning-content hover:bg-warning hover:text-white border-none rounded-full px-4 shadow-sm"
+                      >
+                        🔔 জানতে ইচ্ছুক ({post.followers?.length || 0})
+                      </button>
+
                     </div>
                   )}
 
