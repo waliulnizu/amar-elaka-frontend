@@ -8,6 +8,7 @@ import axios from "axios";
 // অন-পোস্ট-ক্রিয়েটেড (onPostCreated) নামের একটি ফাংশন প্রপ্স হিসেবে রিসিভ করবে
 export default function CreatePostBox({ user, onPostCreated }) {
   const [content, setContent] = useState("");
+  const [category, setCategory] = useState("সাধারণ");
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null); // ছবির প্রিভিউ দেখানোর জন্য
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,8 +52,10 @@ export default function CreatePostBox({ user, onPostCreated }) {
     // মাল্টার রিসিভ করার জন্য FormData পার্সেল বক্স তৈরি
     const formData = new FormData();
     formData.append("content", content);
+    formData.append("category", category);
     if (selectedFile) {
       formData.append("post-img", selectedFile); // 👈 ব্যাকএন্ডের upload.single('post-img') এর সাথে মিল রেখে
+
     }
 
     try {
@@ -67,6 +70,7 @@ export default function CreatePostBox({ user, onPostCreated }) {
       
       // পোস্ট সফল হলে ইনপুট বক্সগুলো একদম ফ্রেশ বা খালি করে দেওয়া
       setContent("");
+      setCategory("সাধারণ"); // 👈 পোস্ট হওয়ার পর আবার ডিফল্ট ক্যাটাগরিতে ফেরত আনা 
       handleRemoveImage();
 
       // ড্যাশবোর্ডের পোস্ট লিস্টকে নতুন পোস্টের কথা জানানো
@@ -104,6 +108,19 @@ export default function CreatePostBox({ user, onPostCreated }) {
             className="textarea textarea-ghost focus:bg-transparent resize-none w-full min-h-[80px] p-2 text-base focus:outline-none placeholder:text-gray-400"
             disabled={isSubmitting}
           />
+          {/* ➕ নতুন: মডার্ন ক্যাটাগরি ড্রপডাউন সিলেক্টর */}
+            <select 
+              value={category} 
+              onChange={(e) => setCategory(e.target.value)}
+              disabled={isSubmitting}
+              className="select select-sm select-bordered w-full max-w-[200px] bg-base-200 text-sm focus:outline-none"
+            >
+              <option value="সাধারণ">🌍 সাধারণ (General)</option>
+              <option value="ব্যবসা">💼 ব্যবসা (Business)</option>
+              <option value="সাহায্য">🤝 সাহায্য (Help)</option>
+              <option value="রক্তদান">🩸 রক্তদান (Blood)</option>
+              <option value="অনুষ্ঠান">🎉 অনুষ্ঠান (Event)</option>
+            </select>
         </div>
 
         {/* ➕ নতুন: ছবি সিলেক্ট করার পর যে সুন্দর লাইভ প্রিভিউ বক্সটি আসবে */}
