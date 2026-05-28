@@ -6,6 +6,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import CreatePostBox from "@/components/CreatePostBox";
+import confetti from "canvas-confetti"; // ➕ নতুন ইমপোর্ট
 
 export default function HomePage() {
   const [userData, setUserData] = useState(null);
@@ -199,47 +200,93 @@ export default function HomePage() {
                     </div>
                   )}
 
-                  {/* ➕ নতুন: সিভিক টেক ইন্টার‍্যাকশন বার (শুধুমাত্র সমস্যার জন্য) */}
+                  {/* ➕ নতুন ও আপডেটেড: সিভিক টেক ইন্টার‍্যাকশন বার (শুধুমাত্র সমস্যার জন্য) */}
                   {post.category === 'সমস্যা' && (
-                    <div className="mt-3 pt-3 border-t border-base-200 flex flex-wrap gap-2 items-center justify-between bg-base-50 p-2 rounded-lg">
+                    <div className={`mt-3 pt-3 border-t border-base-200 flex flex-col gap-3 p-3 rounded-lg transition-all ${post.isSolved ? "bg-success/10 border-success/30" : "bg-base-50"
+                      }`}>
 
-                      <div className="text-xs text-gray-500 font-medium flex flex-col gap-1">
-                        {post.taggedAuthorities?.length > 0 && (
-                          <span><strong className="text-error">ট্যাগ:</strong> {post.taggedAuthorities.join(', ')}</span>
-                        )}
-                        {post.targetDate && (
-                          <span><strong>ডেডলাইন:</strong> {new Date(post.targetDate).toLocaleDateString('bn-BD')}</span>
+                      {/* ট্যাগ ও ডেডলাইন সেকশন */}
+                      <div className="text-xs text-gray-500 font-medium flex flex-wrap justify-between items-center w-full">
+                        <div className="flex flex-col gap-1">
+                          {post.taggedAuthorities?.length > 0 && (
+                            <span><strong className="text-error">ট্যাগ:</strong> {post.taggedAuthorities.join(', ')}</span>
+                          )}
+                          {post.targetDate && (
+                            <span><strong>ডেডলাইন:</strong> {new Date(post.targetDate).toLocaleDateString('bn-BD')}</span>
+                          )}
+                        </div>
+
+                        {/* যদি সমস্যাটি সমাধান হয়ে যায়, তবে একটি সুন্দর গ্রিন ব্যাজ দেখাবে */}
+                        {post.isSolved && (
+                          <span className="badge badge-success text-white font-bold gap-1 px-3 py-2 text-xs animate-bounce">
+                            ✅ সমাধানকৃত (Solved)
+                          </span>
                         )}
                       </div>
 
-                      {/* ফলো / জানতে ইচ্ছুক বাটন (রিয়েল-টাইম কাউন্টিং ফিক্সড) */}
-                      <button
-                        onClick={async () => {
-                          try {
-                            // ১. ব্যাকএন্ডে রিকোয়েস্ট পাঠানো
-                            const res = await axios.put(`http://localhost:5000/api/posts/${post._id}/follow`, {}, { withCredentials: true });
+                      {/* অ্যাকশন বাটন গ্রুপ */}
+                      <div className="flex justify-end gap-2 items-center w-full border-t border-dashed border-base-200 pt-2">
 
-                            // ২. ম্যাজিক লজিক: ম্যাপ লুপ চালিয়ে নির্দিষ্ট পোস্টের ফলোয়ার অ্যারে সরাসরি আপডেট করা
-                            setPosts((prevPosts) =>
-                              prevPosts.map((p) =>
-                                p._id === post._id ? { ...p, followers: res.data.followers } : p
-                              )
-                            );
-
-                            alert(res.data.message);
-                          } catch (error) {
-                            console.error("Follow error:", error);
-                            alert("ফলো করতে সমস্যা হয়েছে!");
-                          }
-                        }}
-                        // ডায়নামিক ক্লাস: কারেন্ট ইউজার যদি অলরেডি ফলো করে রাখে তবে বাটন হাইলাইট বা সলিড কালার হবে
-                        className={`btn btn-sm border-none rounded-full px-4 shadow-sm transition-all ${post.followers?.includes(userData?.id || userData?._id)
+                        {/* ফলো / জানতে ইচ্ছুক বাটন */}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await axios.put(`http://localhost:5000/api/posts/${post._id}/follow`, {}, { withCredentials: true });
+                              setPosts((prevPosts) =>
+                                prevPosts.map((p) => p._id === post._id ? { ...p, followers: res.data.followers } : p)
+                              );
+                              alert(res.data.message);
+                            } catch (error) {
+                              alert("ফলো করতে সমস্যা হয়েছে!");
+                            }
+                          }}
+                          className={`btn btn-xs md:btn-sm border-none rounded-full px-4 shadow-sm transition-all ${post.followers?.includes(userData?.id || userData?._id)
                             ? "bg-warning text-white hover:bg-warning/80"
                             : "bg-warning/20 text-warning-content hover:bg-warning hover:text-white"
-                          }`}
-                      >
-                        🔔 {post.followers?.includes(userData?.id || userData?._id) ? "জানানো হবে" : "জানতে ইচ্ছুক"} ({post.followers?.length || 0})
-                      </button>
+                            }`}
+                        >
+                          🔔 {post.followers?.includes(userData?.id || userData?._id) ? "জানানো হবে" : "জানতে ইচ্ছুক"} ({post.followers?.length || 0})
+                        </button>
+
+                        {/* 👑 জাদুকরী লজিক: "✅ সমাধান হয়েছে" বাটন (শুধুমাত্র পোস্টের লেখক দেখতে পাবেন) */}
+                        {(post.user?._id === userData?.id || post.user === userData?.id || post.user?._id === userData?._id) && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                // ১. ব্যাকএন্ড API কল করা
+                                const res = await axios.put(`http://localhost:5000/api/posts/${post._id}/solve`, {}, { withCredentials: true });
+
+                                // ২. ফ্রন্টএন্ড স্টেট আপডেট (Instant UI Response)
+                                setPosts((prevPosts) =>
+                                  prevPosts.map((p) => p._id === post._id ? { ...p, isSolved: res.data.isSolved } : p)
+                                );
+
+                                // ৩. 🥳 যদি সমাধান ট্র্রিগার হয়, তবে কনফেটি বিস্ফোরণ ঘটানো (Latest HTML5 Canvas Best Practice)
+                                if (res.data.isSolved) {
+                                  confetti({
+                                    particleCount: 150,
+                                    spread: 80,
+                                    origin: { y: 0.6 } // স্ক্রিনের একটু নিচ থেকে ফুটিয়ে তোলা
+                                  });
+                                }
+
+                                // ৪. দোয়ার মেসেজ পপ-আপ করা
+                                alert(res.data.message);
+
+                              } catch (error) {
+                                alert(error.response?.data?.message || "স্ট্যাটাস পরিবর্তন করা যায়নি।");
+                              }
+                            }}
+                            className={`btn btn-xs md:btn-sm border-none rounded-full px-4 shadow-sm font-bold text-white transition-all ${post.isSolved
+                              ? "bg-gray-500 hover:bg-gray-600"
+                              : "bg-success hover:bg-success-focus shadow-success/20"
+                              }`}
+                          >
+                            {post.isSolved ? "🔄 পুনরায় উন্মুক্ত করুন" : "✅ সমাধান হয়েছে"}
+                          </button>
+                        )}
+
+                      </div>
 
                     </div>
                   )}
