@@ -62,9 +62,9 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" suppressHydrationWarning>
                         
-                        <div className="form-control">
+                        <div className="form-control" suppressHydrationWarning>
                             <label className="label">
                                 <span className="label-text font-medium">মোবাইল নাম্বার বা ইমেইল *</span>
                             </label>
@@ -76,7 +76,7 @@ export default function LoginPage() {
                             />
                         </div>
 
-                        <div className="form-control">
+                        <div className="form-control" suppressHydrationWarning>
                             <label className="label">
                                 <span className="label-text font-medium">পাসওয়ার্ড *</span>
                             </label>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                             </label>
                         </div>
 
-                        <div className="form-control mt-6">
+                        <div className="form-control mt-6" suppressHydrationWarning>
                             <button 
                                 type="submit" 
                                 className="btn btn-primary w-full text-white text-lg" 

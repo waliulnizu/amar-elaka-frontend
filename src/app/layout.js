@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
         এতে Grammarly বা অন্য কোনো এক্সটেনশন <body> ট্যাগে এক্সট্রা কিছু বসালে 
         Next.js আর এরর থ্রো করবে না। 
       */}
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+      <body className="font-sans min-h-full flex flex-col" suppressHydrationWarning>
         {children}
       </body>
     </html>

@@ -1,62 +1,89 @@
-// frontend/src/app/register/page.jsx
 "use client";
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import Select from "react-select";
 import axios from "axios";
 import Link from "next/link";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export default function RegisterPage() {
-    const { register, handleSubmit, watch, reset, setValue, getValues } = useForm();
+    const { register, handleSubmit, control, watch, reset, setValue, getValues } = useForm();
     const [message, setMessage] = useState({ type: "", text: "" });
     const [isLoading, setIsLoading] = useState(false);
-    
     const [showPassword, setShowPassword] = useState(false);
 
+    // লোকেশন স্টেট
     const [divisions, setDivisions] = useState([]);
-    const [districtsData, setDistrictsData] = useState([]);
+    const [districts, setDistricts] = useState([]);
     const [upazilas, setUpazilas] = useState([]);
+    const [localBodies, setLocalBodies] = useState([]);
 
-    const selectedDivision = watch("location.division");
-    const selectedDistrict = watch("location.district");
+    // ওয়াচিং ফিল্ডস
+    const selectedDivision = watch("location.divisionId");
+    const selectedDistrict = watch("location.districtId");
+    const selectedUpazila = watch("location.upazilaId");
     const selectedGender = watch("gender");
-    const selectedAreaType = watch("location.areaType");
-
     const watchedProfessions = watch("profession") || [];
     const watchedDiseases = watch("healthConditions") || [];
 
     const commonProfessions = ["ছাত্র", "শিক্ষক", "কৃষক", "ব্যবসায়ী", "চাকরিজীবী", "ডাক্তার", "প্রবাসী", "অন্যান্য"];
     const commonDiseases = ["ডায়াবেটিস", "উচ্চ রক্তচাপ", "হাঁপানি", "হৃদরোগ", "কিডনি সমস্যা", "অন্যান্য"];
 
+    // ১. বিভাগ লোড
     useEffect(() => {
-        axios.get("https://bdapis.com/api/v1.1/divisions")
-            .then(res => setDivisions(res.data.data))
-            .catch(err => console.error(err));
+        axios.get("http://localhost:5000/api/locations/divisions")
+            .then(res => setDivisions(res.data));
     }, []);
 
+    // ২. বিভাগ → জেলা
     useEffect(() => {
         if (selectedDivision) {
-            axios.get(`https://bdapis.com/api/v1.1/division/${selectedDivision.toLowerCase()}`)
-                .then(res => {
-                    setDistrictsData(res.data.data);
-                    setUpazilas([]);
-                    setValue("location.district", "");
-                    setValue("location.upazila", "");
-                })
-                .catch(err => console.error(err));
+            setDistricts([]);
+            setUpazilas([]);
+            setLocalBodies([]);
+            setValue("location.districtId", null);
+            setValue("location.upazilaId", null);
+            setValue("location.localBodyId", null);
+            axios.get(`http://localhost:5000/api/locations/districts/${selectedDivision.value}`)
+                .then(res => setDistricts(res.data));
         }
     }, [selectedDivision, setValue]);
 
+    // ৩. জেলা → উপজেলা
     useEffect(() => {
         if (selectedDistrict) {
-            const targetDistrict = districtsData.find(d => d.district === selectedDistrict);
-            if (targetDistrict) {
-                const foundUpazilas = targetDistrict.upazilla || targetDistrict.upazilas || [];
-                setUpazilas(foundUpazilas);
-            }
-            setValue("location.upazila", "");
+            setUpazilas([]);
+            setLocalBodies([]);
+            setValue("location.upazilaId", null);
+            setValue("location.localBodyId", null);
+            axios.get(`http://localhost:5000/api/locations/upazilas/${selectedDistrict.value}`)
+                .then(res => setUpazilas(res.data));
         }
-    }, [selectedDistrict, districtsData, setValue]);
+    }, [selectedDistrict, setValue]);
+
+    // // ৪. উপজেলা → ইউনিয়ন/পৌরসভা
+    // useEffect(() => {
+    //     if (selectedUpazila && selectedDistrict) {
+    //         setLocalBodies([]);
+    //         setValue("location.localBodyId", null);
+    //         axios.get(`http://localhost:5000/api/locations/local-bodies/${selectedUpazila.value}/${selectedDistrict.value}`)
+    //             .then(res => setLocalBodies(res.data));
+    //     } else {
+    //         setLocalBodies([]);
+    //     }
+    // }, [selectedUpazila, selectedDistrict, setValue]);
+
+    // ৪. উপজেলা পরিবর্তন -> ইউনিয়ন/পৌরসভা লোড
+useEffect(() => {
+    // এখানে শুধুমাত্র upazilaId পাঠাবেন
+    if (selectedUpazila && selectedUpazila.value) {
+        axios.get(`http://localhost:5000/api/locations/local-bodies/${selectedUpazila.value}`)
+            .then(res => setLocalBodies(res.data))
+            .catch(() => setLocalBodies([]));
+    } else {
+        setLocalBodies([]);
+    }
+}, [selectedUpazila]); // selectedDistrict এর ওপর ডিপেন্ড করার দরকার নেই
 
     const handleSameAsMobile = (e) => {
         if (e.target.checked) {
@@ -74,7 +101,7 @@ export default function RegisterPage() {
         if (data.gender === 'পুরুষ' && !data.phone) {
             setMessage({ type: "error", text: "পুরুষদের জন্য মোবাইল নাম্বার দেওয়া বাধ্যতামূলক!" });
             setIsLoading(false);
-            return; 
+            return;
         }
         if (data.gender === 'নারী' && !data.phone && !data.email) {
             setMessage({ type: "error", text: "নারীদের ক্ষেত্রে মোবাইল নাম্বার অথবা ইমেইল— যেকোনো একটি অবশ্যই দিতে হবে!" });
@@ -98,10 +125,19 @@ export default function RegisterPage() {
             delete data.otherProfession;
             delete data.otherDisease;
 
+            // react-select থেকে শুধু value (id) বের করে পাঠানো
             const payload = {
                 ...data,
                 profession: finalProfessions,
-                healthConditions: finalHealth
+                healthConditions: finalHealth,
+                location: {
+    divisionId: data.location.divisionId?.value,
+    districtId: data.location.districtId?.value,
+    upazilaId: data.location.upazilaId?.value,
+    localBodyId: data.location.localBodyId?.value,
+    wardId: data.location.wardId,
+    areaName: data.location.areaName,
+}
             };
 
             const response = await axios.post("http://localhost:5000/api/users/register", payload);
@@ -115,6 +151,20 @@ export default function RegisterPage() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // react-select custom styles (DaisyUI এর সাথে মিলিয়ে)
+    const selectStyles = {
+        control: (base) => ({
+            ...base,
+            minHeight: "3rem",
+            borderRadius: "0.5rem",
+            borderColor: "#d1d5db",
+            boxShadow: "none",
+            "&:hover": { borderColor: "#a3a3a3" }
+        }),
+        placeholder: (base) => ({ ...base, color: "#9ca3af" }),
+        menu: (base) => ({ ...base, zIndex: 50 }),
     };
 
     return (
@@ -132,7 +182,7 @@ export default function RegisterPage() {
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                            {/* --- পার্সোনাল ইনফরমেশন --- */}
+                            {/* --- ব্যক্তিগত তথ্য --- */}
                             <div className="space-y-4 md:border-r md:pr-4">
                                 <h3 className="text-xl font-semibold border-b pb-2 text-gray-700">ব্যক্তিগত তথ্য</h3>
 
@@ -183,7 +233,6 @@ export default function RegisterPage() {
                                     </div>
                                     <div className="form-control">
                                         <label className="label"><span className="label-text font-medium">রক্তের গ্রুপ *</span></label>
-                                        {/* Error fix: প্লেসহোল্ডারে disabled যুক্ত করা হয়েছে */}
                                         <select {...register("bloodGroup", { required: true })} defaultValue="" className="select select-bordered select-md w-full">
                                             <option value="" disabled>নির্বাচন করুন</option>
                                             {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
@@ -196,13 +245,13 @@ export default function RegisterPage() {
                                 <div className="form-control">
                                     <label className="label"><span className="label-text font-medium">পাসওয়ার্ড *</span></label>
                                     <div className="relative">
-                                        <input 
-                                            type={showPassword ? "text" : "password"} 
-                                            {...register("password", { required: true, minLength: 6 })} 
-                                            className="input input-bordered w-full pr-12" 
-                                            placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন" 
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            {...register("password", { required: true, minLength: 6 })}
+                                            className="input input-bordered w-full pr-12"
+                                            placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন"
                                         />
-                                        <button 
+                                        <button
                                             type="button"
                                             className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-primary transition-colors"
                                             onClick={() => setShowPassword(!showPassword)}
@@ -248,70 +297,96 @@ export default function RegisterPage() {
                                 </div>
                             </div>
 
-                            {/* --- লোকেশন ইনফরমেশন --- */}
-                            <div className="space-y-4 md:pl-4">
+                            {/* --- লোকেশন তথ্য (react-select) --- */}
+                            <div className="space-y-4">
                                 <h3 className="text-xl font-semibold border-b pb-2 text-gray-700">ঠিকানা / লোকেশন</h3>
 
                                 <div className="form-control">
                                     <label className="label"><span className="label-text font-medium">বিভাগ *</span></label>
-                                    {/* Error fix: প্লেসহোল্ডারে disabled যুক্ত করা হয়েছে */}
-                                    <select {...register("location.division", { required: true })} defaultValue="" className="select select-bordered select-md w-full">
-                                        <option value="" disabled>বিভাগ নির্বাচন করুন</option>
-                                        {divisions.map(div => <option key={div.division} value={div.division}>{div.division}</option>)}
-                                    </select>
+                                    <Controller
+                                        name="location.divisionId"
+                                        control={control}
+                                        rules={{ required: true }}
+                                        render={({ field }) => (
+                                            <Select
+                                                {...field}
+                                                options={divisions.map(d => ({ value: d._id, label: d.name }))}
+                                                isSearchable
+                                                placeholder="বিভাগ নির্বাচন করুন"
+                                                styles={selectStyles}
+                                            />
+                                        )}
+                                    />
                                 </div>
 
                                 <div className="form-control">
                                     <label className="label"><span className="label-text font-medium">জেলা *</span></label>
-                                    <select {...register("location.district", { required: true })} defaultValue="" className="select select-bordered select-md w-full" disabled={!selectedDivision}>
-                                        <option value="" disabled>জেলা নির্বাচন করুন</option>
-                                        {districtsData.map(dist => <option key={dist.district} value={dist.district}>{dist.district}</option>)}
-                                    </select>
+                                    <Controller
+                                        name="location.districtId"
+                                        control={control}
+                                        rules={{ required: true }}
+                                        render={({ field }) => (
+                                            <Select
+                                                {...field}
+                                                options={districts.map(d => ({ value: d._id, label: d.name }))}
+                                                isSearchable
+                                                placeholder="জেলা নির্বাচন করুন"
+                                                isDisabled={!selectedDivision}
+                                                styles={selectStyles}
+                                            />
+                                        )}
+                                    />
                                 </div>
 
                                 <div className="form-control">
-                                    <label className="label"><span className="label-text font-medium">উপজেলা / থানা *</span></label>
-                                    <select {...register("location.upazila", { required: true })} defaultValue="" className="select select-bordered select-md w-full" disabled={!selectedDistrict}>
-                                        <option value="" disabled>উপজেলা নির্বাচন করুন</option>
-                                        {(upazilas || []).map((upz) => <option key={upz} value={upz}>{upz}</option>)}
-                                    </select>
+                                    <label className="label"><span className="label-text font-medium">উপজেলা *</span></label>
+                                    <Controller
+                                        name="location.upazilaId"
+                                        control={control}
+                                        rules={{ required: true }}
+                                        render={({ field }) => (
+                                            <Select
+                                                {...field}
+                                                options={upazilas.map(u => ({ value: u._id, label: u.name }))}
+                                                isSearchable
+                                                placeholder="উপজেলা নির্বাচন করুন"
+                                                isDisabled={!selectedDistrict}
+                                                styles={selectStyles}
+                                            />
+                                        )}
+                                    />
                                 </div>
 
-                                <div className="form-control mt-4">
-                                    <label className="label"><span className="label-text font-medium text-amber-600">এলাকার ধরন *</span></label>
-                                    {/* Error fix: প্লেসহোল্ডারে disabled যুক্ত করা হয়েছে */}
-                                    <select {...register("location.areaType", { required: true })} defaultValue="" className="select select-bordered select-md w-full border-amber-300">
-                                        <option value="" disabled>পৌরসভা নাকি ইউনিয়ন?</option>
-                                        <option value="পৌরসভা">পৌরসভা</option>
-                                        <option value="ইউনিয়ন">ইউনিয়ন</option>
-                                    </select>
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text font-medium">ইউনিয়ন/পৌরসভা *</span></label>
+                                    <Controller
+                                        name="location.localBodyId"
+                                        control={control}
+                                        rules={{ required: true }}
+                                        render={({ field }) => (
+                                            <Select
+                                                {...field}
+                                                options={localBodies.map(lb => ({ value: lb._id, label: `${lb.name} (${lb.type})` }))}
+                                                isSearchable
+                                                placeholder="ইউনিয়ন/পৌরসভা নির্বাচন করুন"
+                                                isDisabled={!selectedUpazila}
+                                                styles={selectStyles}
+                                            />
+                                        )}
+                                    />
                                 </div>
 
-                                {selectedAreaType && (
-                                    <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 space-y-4 animate-fade-in">
-                                        <div className="form-control">
-                                            <label className="label">
-                                                <span className="label-text font-medium">{selectedAreaType} এর নাম * (ইংরেজিতে টাইপ করুন)</span>
-                                            </label>
-                                            <input type="text" {...register("location.unionOrPourashova", { required: true })} className="input input-bordered w-full bg-white" placeholder={`Type ${selectedAreaType === 'পৌরসভা' ? 'Pourashova' : 'Union'} name`} />
-                                        </div>
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text font-medium">ওয়ার্ড নাম্বার *</span></label>
+                                    <input {...register("location.wardId", { required: true })} className="input input-bordered w-full" placeholder="ওয়ার্ড নাম্বার" />
+                                </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text font-medium">{selectedAreaType} ওয়ার্ড নাম্বার *</span>
-                                                </label>
-                                                <input type="text" {...register("location.ward", { required: true })} className="input input-bordered w-full bg-white" placeholder="e.g. 05" />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label"><span className="label-text font-medium">গ্রাম / মহল্লা *</span></label>
-                                                <input type="text" {...register("location.gram", { required: true })} className="input input-bordered w-full bg-white" placeholder="Type village name" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text font-medium">গ্রাম বা মহল্লার নাম *</span></label>
+                                    <input {...register("location.areaName", { required: true })} className="input input-bordered w-full" placeholder="গ্রাম বা মহল্লার নাম" />
+                                </div>
                             </div>
+
                         </div>
 
                         <div className="divider my-2"></div>
@@ -321,11 +396,10 @@ export default function RegisterPage() {
                                 {isLoading ? <span className="loading loading-spinner"></span> : "অ্যাকাউন্ট তৈরি করুন"}
                             </button>
                         </div>
-                        
+
                         <p className="text-center mt-4 pb-4">
                             আগেই অ্যাকাউন্ট থাকলে? <Link href="/login" className="text-primary font-bold hover:underline">লগিন করুন</Link>
                         </p>
-
                     </form>
                 </div>
             </div>
