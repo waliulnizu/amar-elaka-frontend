@@ -1,5 +1,6 @@
 import axios from "axios";
 import confetti from "canvas-confetti";
+import Link from "next/link";
 
 export default function Newsfeed({ posts, setPosts, currentUser }) {
   const getCategoryBadgeClass = (category) => {
@@ -80,9 +81,9 @@ export default function Newsfeed({ posts, setPosts, currentUser }) {
               post.helperSelected ? "bg-success/5 border-success/20" : "bg-base-50"
             }`}>
               <div className="flex justify-between items-center text-xs w-full">
-                <span className="text-gray-500 font-medium">
-                  🤝 ভলান্টিয়ার সংখ্যা: <strong className="text-primary text-sm">{post.helpers?.length || 0} জন</strong>
-                </span>
+                <Link href={`/posts/${post._id}`} className="text-gray-500 font-medium hover:text-primary transition-colors">
+                  🤝 ভলান্টিয়ার সংখ্যা: <strong className="text-primary text-sm hover:underline">{post.helpers?.length || 0} জন</strong>
+                </Link>
                 {post.helperSelected && (
                   <span className="text-success font-bold bg-success/10 px-2 py-1 rounded-md text-[11px]">
                     ✓ কমপ্লিট

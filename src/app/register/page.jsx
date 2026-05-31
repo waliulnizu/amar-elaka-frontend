@@ -362,6 +362,7 @@ export default function RegisterPage() {
                                         render={({ field }) => (
                                             <Select
                                                 {...field}
+                                                instanceId="division-select"
                                                 options={divisions.map(d => ({ value: d._id, label: d.name }))}
                                                 isSearchable
                                                 placeholder="বিভাগ নির্বাচন করুন"
@@ -380,6 +381,7 @@ export default function RegisterPage() {
                                         render={({ field }) => (
                                             <Select
                                                 {...field}
+                                                instanceId="district-select"
                                                 options={districts.map(d => ({ value: d._id, label: d.name }))}
                                                 isSearchable
                                                 placeholder="জেলা নির্বাচন করুন"
@@ -416,6 +418,7 @@ export default function RegisterPage() {
                                             render={({ field }) => (
                                                 <Select
                                                     {...field}
+                                                    instanceId="city-corporation-select"
                                                     options={cityCorporations.map(c => ({ value: c._id, label: c.name }))}
                                                     isSearchable
                                                     placeholder="সিটি কর্পোরেশন নির্বাচন করুন"
@@ -437,6 +440,7 @@ export default function RegisterPage() {
                                                 render={({ field }) => (
                                                     <Select
                                                         {...field}
+                                                        instanceId="upazila-select"
                                                         options={upazilas.map(u => ({ value: u._id, label: u.name }))}
                                                         isSearchable
                                                         placeholder="উপজেলা নির্বাচন করুন"
@@ -475,6 +479,7 @@ export default function RegisterPage() {
                                                         render={({ field }) => (
                                                             <Select
                                                                 {...field}
+                                                                instanceId="pourashava-select"
                                                                 options={localBodies.filter(lb => lb.type === 'Pourashava').map(lb => ({ value: lb._id, label: lb.name }))}
                                                                 isSearchable
                                                                 placeholder="পৌরসভা নির্বাচন করুন"
@@ -496,6 +501,7 @@ export default function RegisterPage() {
                                                     render={({ field }) => (
                                                         <Select
                                                             {...field}
+                                                            instanceId="union-select"
                                                             options={localBodies.filter(lb => lb.type === 'Union').map(lb => ({ value: lb._id, label: lb.name }))}
                                                             isSearchable
                                                             placeholder="ইউনিয়ন নির্বাচন করুন"

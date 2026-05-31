@@ -1,149 +1,202 @@
-// frontend/src/components/LocationSelector.jsx
 "use client";
 
 import { useState, useEffect } from "react";
 import axios from "axios";
 
 export default function LocationSelector({ onLocationSelect, defaultValues }) {
-  // ১. স্টেট ডিক্লারেশন (ডেটা ধরে রাখার জন্য)
-  const [thanas, setThanas] = useState([]);
-  const [areas, setAreas] = useState([]);
+  const [divisions, setDivisions] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [upazilas, setUpazilas] = useState([]);
+  const [localBodies, setLocalBodies] = useState([]);
   const [wards, setWards] = useState([]);
 
-  // ২. ইউজার কী সিলেক্ট করছে তার স্টেট
-  const [selectedThana, setSelectedThana] = useState(defaultValues?.thana || "");
-  const [selectedArea, setSelectedArea] = useState(defaultValues?.areaName || "");
-  const [selectedWard, setSelectedWard] = useState(defaultValues?.wardOrGram || "");
+  const [selectedDivision, setSelectedDivision] = useState(defaultValues?.divisionId || "");
+  const [selectedDistrict, setSelectedDistrict] = useState(defaultValues?.districtId || "");
+  const [selectedUpazila, setSelectedUpazila] = useState(defaultValues?.upazilaId || "");
+  const [selectedLocalBody, setSelectedLocalBody] = useState(defaultValues?.localBodyId || "");
+  const [selectedWard, setSelectedWard] = useState(defaultValues?.wardId || "");
 
-  // ৩. লোডিং স্টেট (UX ভালো করার জন্য)
-  const [loadingThanas, setLoadingThanas] = useState(false);
-  const [loadingAreas, setLoadingAreas] = useState(false);
-  const [loadingWards, setLoadingWards] = useState(false);
+  const [loading, setLoading] = useState({ div: false, dist: false, upa: false, loc: false, ward: false });
+  const [showManualWard, setShowManualWard] = useState(false);
 
-  // ৪. প্রথমবার পেজ লোড হলে শুধু থানার তালিকা আনব
   useEffect(() => {
-    const fetchThanas = async () => {
-      setLoadingThanas(true);
+    const fetchDivisions = async () => {
+      setLoading(prev => ({ ...prev, div: true }));
       try {
-        // ব্যাকএন্ড এপিআই কল (আপনার ব্যাকএন্ড পোর্ট ৫০০০)
-        const res = await axios.get("http://localhost:5000/api/locations/thanas");
-        setThanas(res.data);
+        const res = await axios.get("http://localhost:5000/api/locations/divisions");
+        setDivisions(res.data.data || res.data);
       } catch (error) {
-        console.error("থানা লোড করতে সমস্যা:", error);
+        console.error("বিভাগ লোড করতে সমস্যা:", error);
       } finally {
-        setLoadingThanas(false);
+        setLoading(prev => ({ ...prev, div: false }));
       }
     };
-    fetchThanas();
+    fetchDivisions();
   }, []);
 
-  // ৫. থানা পরিবর্তনের সাথে সাথে এরিয়া (ইউনিয়ন/পৌরসভা) লোড করা
-  const handleThanaChange = async (e) => {
-    const thana = e.target.value;
-    setSelectedThana(thana);
-    
-    // 🧠 Developer Logic: থানা পালটালে আগের ইউনিয়ন ও গ্রাম মুছে ফেলতে হবে
-    setSelectedArea("");
+  const handleDivisionChange = async (e) => {
+    const divId = e.target.value;
+    setSelectedDivision(divId);
+    setSelectedDistrict("");
+    setSelectedUpazila("");
+    setSelectedLocalBody("");
     setSelectedWard("");
-    setAreas([]);
+    setDistricts([]);
+    setUpazilas([]);
+    setLocalBodies([]);
     setWards([]);
-    onLocationSelect({ thana, areaName: "", wardOrGram: "" }); // Parent কে আপডেট জানানো
+    setShowManualWard(false);
+    onLocationSelect({ divisionId: divId, districtId: "", upazilaId: "", localBodyId: "", wardId: "" });
 
-    if (!thana) return;
+    if (!divId) return;
 
-    setLoadingAreas(true);
+    setLoading(prev => ({ ...prev, dist: true }));
     try {
-      const res = await axios.get(`http://localhost:5000/api/locations/areas/${thana}`);
-      setAreas(res.data); // ডেটাবেস থেকে পাওয়া এরিয়া সেট করা
+      const res = await axios.get(`http://localhost:5000/api/locations/districts/${divId}`);
+      setDistricts(res.data.data || res.data);
     } catch (error) {
-      console.error("এরিয়া লোড করতে সমস্যা:", error);
+      console.error("জেলা লোড করতে সমস্যা:", error);
     } finally {
-      setLoadingAreas(false);
+      setLoading(prev => ({ ...prev, dist: false }));
     }
   };
 
-  // ৬. এরিয়া পরিবর্তনের সাথে সাথে ওয়ার্ড বা গ্রাম লোড করা
-  const handleAreaChange = async (e) => {
-    const area = e.target.value;
-    setSelectedArea(area);
-    
-    // 🧠 Developer Logic: এরিয়া পালটালে আগের গ্রাম মুছে ফেলতে হবে
+  const handleDistrictChange = async (e) => {
+    const distId = e.target.value;
+    setSelectedDistrict(distId);
+    setSelectedUpazila("");
+    setSelectedLocalBody("");
     setSelectedWard("");
+    setUpazilas([]);
+    setLocalBodies([]);
     setWards([]);
-    onLocationSelect({ thana: selectedThana, areaName: area, wardOrGram: "" });
+    setShowManualWard(false);
+    onLocationSelect({ divisionId: selectedDivision, districtId: distId, upazilaId: "", localBodyId: "", wardId: "" });
 
-    if (!area) return;
+    if (!distId) return;
 
-    setLoadingWards(true);
+    setLoading(prev => ({ ...prev, upa: true }));
     try {
-      const res = await axios.get(`http://localhost:5000/api/locations/wards/${area}`);
-      setWards(res.data);
+      const res = await axios.get(`http://localhost:5000/api/locations/upazilas/${distId}`);
+      setUpazilas(res.data.data || res.data);
     } catch (error) {
-      console.error("ওয়ার্ড লোড করতে সমস্যা:", error);
+      console.error("উপজেলা লোড করতে সমস্যা:", error);
     } finally {
-      setLoadingWards(false);
+      setLoading(prev => ({ ...prev, upa: false }));
     }
   };
 
-  // ৭. ওয়ার্ড পরিবর্তনের হ্যান্ডলার
+  const handleUpazilaChange = async (e) => {
+    const upaId = e.target.value;
+    setSelectedUpazila(upaId);
+    setSelectedLocalBody("");
+    setSelectedWard("");
+    setLocalBodies([]);
+    setWards([]);
+    setShowManualWard(false);
+    onLocationSelect({ divisionId: selectedDivision, districtId: selectedDistrict, upazilaId: upaId, localBodyId: "", wardId: "" });
+
+    if (!upaId) return;
+
+    setLoading(prev => ({ ...prev, loc: true }));
+    try {
+      const res = await axios.get(`http://localhost:5000/api/locations/local-bodies/${upaId}`);
+      setLocalBodies(res.data.data || res.data);
+    } catch (error) {
+      console.error("ইউনিয়ন/পৌরসভা লোড করতে সমস্যা:", error);
+    } finally {
+      setLoading(prev => ({ ...prev, loc: false }));
+    }
+  };
+
+  const handleLocalBodyChange = async (e) => {
+    const locId = e.target.value;
+    setSelectedLocalBody(locId);
+    setSelectedWard("");
+    setWards([]);
+    setShowManualWard(false);
+    onLocationSelect({ divisionId: selectedDivision, districtId: selectedDistrict, upazilaId: selectedUpazila, localBodyId: locId, wardId: "" });
+
+    if (!locId) return;
+
+    setLoading(prev => ({ ...prev, ward: true }));
+    try {
+      const res = await axios.get(`http://localhost:5000/api/locations/wards/${locId}`);
+      const fetchedWards = res.data.data || res.data;
+      setWards(fetchedWards);
+      if (fetchedWards.length === 0) {
+        setShowManualWard(true);
+      }
+    } catch (error) {
+      console.error("ওয়ার্ড/গ্রাম লোড করতে সমস্যা:", error);
+    } finally {
+      setLoading(prev => ({ ...prev, ward: false }));
+    }
+  };
+
   const handleWardChange = (e) => {
-    const ward = e.target.value;
-    setSelectedWard(ward);
-    // চূড়ান্ত ডেটা Parent কম্পোনেন্টকে (যেমন প্রোফাইল পেজ) পাঠিয়ে দেওয়া
-    onLocationSelect({ thana: selectedThana, areaName: selectedArea, wardOrGram: ward });
+    const val = e.target.value;
+    if (val === "manual") {
+      setShowManualWard(true);
+      setSelectedWard("");
+      onLocationSelect({ divisionId: selectedDivision, districtId: selectedDistrict, upazilaId: selectedUpazila, localBodyId: selectedLocalBody, wardId: "" });
+      return;
+    }
+    setSelectedWard(val);
+    onLocationSelect({ divisionId: selectedDivision, districtId: selectedDistrict, upazilaId: selectedUpazila, localBodyId: selectedLocalBody, wardId: val });
   };
 
-  // UI রেন্ডারিং (DaisyUI ব্যবহার করে)
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* থানা সিলেক্ট */}
       <div className="form-control w-full">
-        <label className="label"><span className="label-text font-bold">থানা নির্বাচন করুন</span></label>
-        <select 
-          className="select select-bordered w-full" 
-          value={selectedThana} 
-          onChange={handleThanaChange}
-          disabled={loadingThanas}
-        >
-          <option value="">{loadingThanas ? "লোড হচ্ছে..." : "থানা বাছাই করুন"}</option>
-          {thanas.map((thana, i) => (
-            <option key={i} value={thana}>{thana}</option>
-          ))}
+        <label className="label"><span className="label-text font-bold">বিভাগ</span></label>
+        <select className="select select-bordered w-full" value={selectedDivision} onChange={handleDivisionChange} disabled={loading.div}>
+          <option value="">{loading.div ? "লোড হচ্ছে..." : "বিভাগ বাছাই করুন"}</option>
+          {Array.isArray(divisions) && divisions.map(div => <option key={div._id} value={div._id}>{div.name}</option>)}
         </select>
       </div>
 
-      {/* এরিয়া (ইউনিয়ন/পৌরসভা) সিলেক্ট - থানা সিলেক্ট না করলে এটি disabled থাকবে */}
+      <div className="form-control w-full">
+        <label className="label"><span className="label-text font-bold">জেলা</span></label>
+        <select className="select select-bordered w-full" value={selectedDistrict} onChange={handleDistrictChange} disabled={!selectedDivision || loading.dist}>
+          <option value="">{loading.dist ? "লোড হচ্ছে..." : "জেলা বাছাই করুন"}</option>
+          {Array.isArray(districts) && districts.map(dist => <option key={dist._id} value={dist._id}>{dist.name}</option>)}
+        </select>
+      </div>
+
+      <div className="form-control w-full">
+        <label className="label"><span className="label-text font-bold">উপজেলা / থানা</span></label>
+        <select className="select select-bordered w-full" value={selectedUpazila} onChange={handleUpazilaChange} disabled={!selectedDistrict || loading.upa}>
+          <option value="">{loading.upa ? "লোড হচ্ছে..." : "উপজেলা বাছাই করুন"}</option>
+          {Array.isArray(upazilas) && upazilas.map(upa => <option key={upa._id} value={upa._id}>{upa.name}</option>)}
+        </select>
+      </div>
+
       <div className="form-control w-full">
         <label className="label"><span className="label-text font-bold">পৌরসভা / ইউনিয়ন</span></label>
-        <select 
-          className="select select-bordered w-full" 
-          value={selectedArea} 
-          onChange={handleAreaChange}
-          disabled={!selectedThana || loadingAreas}
-        >
-          <option value="">{loadingAreas ? "লোড হচ্ছে..." : "পৌরসভা বা ইউনিয়ন বাছাই করুন"}</option>
-          {areas.map((area, i) => (
-            <option key={i} value={area.areaName}>
-              {area.areaName} ({area.type}) {/* ব্র্যাকেটে দেখাবে এটি পৌরসভা নাকি ইউনিয়ন */}
-            </option>
-          ))}
+        <select className="select select-bordered w-full" value={selectedLocalBody} onChange={handleLocalBodyChange} disabled={!selectedUpazila || loading.loc}>
+          <option value="">{loading.loc ? "লোড হচ্ছে..." : "পৌরসভা বা ইউনিয়ন বাছাই করুন"}</option>
+          {Array.isArray(localBodies) && localBodies.map(loc => <option key={loc._id} value={loc._id}>{loc.name} ({loc.type})</option>)}
         </select>
       </div>
 
-      {/* ওয়ার্ড / গ্রাম সিলেক্ট - এরিয়া সিলেক্ট না করলে এটি disabled থাকবে */}
       <div className="form-control w-full">
         <label className="label"><span className="label-text font-bold">ওয়ার্ড / গ্রাম / মহল্লা</span></label>
-        <select 
-          className="select select-bordered w-full" 
-          value={selectedWard} 
-          onChange={handleWardChange}
-          disabled={!selectedArea || loadingWards}
-        >
-          <option value="">{loadingWards ? "লোড হচ্ছে..." : "গ্রাম বা ওয়ার্ড বাছাই করুন"}</option>
-          {wards.map((ward, i) => (
-            <option key={i} value={ward.wardOrGram}>{ward.wardOrGram}</option>
-          ))}
-        </select>
+        {showManualWard ? (
+          <input 
+            type="text" 
+            className="input input-bordered w-full" 
+            placeholder="আপনার গ্রাম বা ওয়ার্ডের নাম লিখুন" 
+            value={selectedWard} 
+            onChange={handleWardChange} 
+          />
+        ) : (
+          <select className="select select-bordered w-full" value={selectedWard} onChange={handleWardChange} disabled={!selectedLocalBody || loading.ward}>
+            <option value="">{loading.ward ? "লোড হচ্ছে..." : "গ্রাম বা ওয়ার্ড বাছাই করুন"}</option>
+            {Array.isArray(wards) && wards.map(ward => <option key={ward._id} value={ward._id}>{ward.wardNo || ward.name}</option>)}
+            {wards.length > 0 && <option value="manual" className="font-bold text-primary">অন্যান্য (নিজে লিখুন)</option>}
+          </select>
+        )}
       </div>
     </div>
   );

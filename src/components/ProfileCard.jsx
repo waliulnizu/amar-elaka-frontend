@@ -1,9 +1,7 @@
-import { useState, useRef } from "react";
-import LocationSelector from "./LocationSelector";
+import { useRef } from "react";
+import Link from "next/link";
 
-export default function ProfileCard({ user, onImageUpload, onLocationSave, isUploading }) {
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
-  const [newLocation, setNewLocation] = useState(null);
+export default function ProfileCard({ user, onImageUpload, isUploading }) {
   const fileInputRef = useRef(null);
 
   return (
@@ -37,38 +35,23 @@ export default function ProfileCard({ user, onImageUpload, onLocationSave, isUpl
         <p className="flex flex-col">
           <strong>ঠিকানা:</strong> 
           <span className="text-gray-500">
-            {user?.wardOrGram ? `${user.wardOrGram}, ` : ""}
-            {user?.areaName ? `${user.areaName}, ` : ""}
-            {user?.thana ? `${user.thana}` : "ঠিকানা যুক্ত করা হয়নি"}
+            {user?.location ? (
+              <>
+                {user.location.areaName && `${user.location.areaName}, `}
+                {user.location.localBodyName && `${user.location.localBodyName}, `}
+                {user.location.upazilaName && `${user.location.upazilaName}`}
+              </>
+            ) : (
+              "ঠিকানা আপডেট করুন"
+            )}
           </span>
         </p>
       </div>
 
       <div className="w-full border-t mt-4 pt-4">
-        {!isEditingLocation ? (
-          <button onClick={() => setIsEditingLocation(true)} className="btn btn-outline btn-primary btn-sm w-full">
-            📍 ঠিকানা আপডেট করুন
-          </button>
-        ) : (
-          <div className="flex flex-col gap-3 p-3 bg-base-50 rounded-lg border">
-            <LocationSelector onLocationSelect={setNewLocation} defaultValues={user} />
-            <div className="flex gap-2">
-              <button 
-                onClick={() => {
-                  onLocationSave(newLocation);
-                  setIsEditingLocation(false);
-                }} 
-                disabled={!newLocation?.wardOrGram}
-                className="btn btn-primary btn-sm flex-1"
-              >
-                সেভ করুন
-              </button>
-              <button onClick={() => setIsEditingLocation(false)} className="btn btn-ghost btn-sm flex-1">
-                বাতিল
-              </button>
-            </div>
-          </div>
-        )}
+        <Link href="/profile" className="btn btn-outline btn-primary btn-sm w-full">
+          📍 প্রোফাইল ও ঠিকানা আপডেট
+        </Link>
       </div>
     </div>
   );
