@@ -16,7 +16,12 @@ export default function RegisterPage() {
     const [divisions, setDivisions] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [upazilas, setUpazilas] = useState([]);
+    const [cityCorporations, setCityCorporations] = useState([]);
     const [localBodies, setLocalBodies] = useState([]);
+
+    // রেডিও বাটন স্টেট
+    const [districtAreaType, setDistrictAreaType] = useState("");
+    const [upazilaAreaType, setUpazilaAreaType] = useState("");
 
     // ওয়াচিং ফিল্ডস
     const selectedDivision = watch("location.divisionId");
@@ -49,15 +54,25 @@ export default function RegisterPage() {
         }
     }, [selectedDivision, setValue]);
 
-    // ৩. জেলা → উপজেলা
+    // ৩. জেলা → উপজেলা ও সিটি কর্পোরেশন
     useEffect(() => {
         if (selectedDistrict) {
             setUpazilas([]);
+            setCityCorporations([]);
             setLocalBodies([]);
+            setDistrictAreaType("");
+            setUpazilaAreaType("");
             setValue("location.upazilaId", null);
             setValue("location.localBodyId", null);
             axios.get(`http://localhost:5000/api/locations/upazilas/${selectedDistrict.value}`)
                 .then(res => setUpazilas(res.data));
+            axios.get(`http://localhost:5000/api/locations/city-corporations/${selectedDistrict.value}`)
+                .then(res => {
+                    setCityCorporations(res.data);
+                    if (res.data.length === 0) {
+                        setDistrictAreaType("upazila");
+                    }
+                });
         }
     }, [selectedDistrict, setValue]);
 
@@ -74,16 +89,53 @@ export default function RegisterPage() {
     // }, [selectedUpazila, selectedDistrict, setValue]);
 
     // ৪. উপজেলা পরিবর্তন -> ইউনিয়ন/পৌরসভা লোড
-useEffect(() => {
-    // এখানে শুধুমাত্র upazilaId পাঠাবেন
-    if (selectedUpazila && selectedUpazila.value) {
-        axios.get(`http://localhost:5000/api/locations/local-bodies/${selectedUpazila.value}`)
-            .then(res => setLocalBodies(res.data))
-            .catch(() => setLocalBodies([]));
-    } else {
-        setLocalBodies([]);
-    }
-}, [selectedUpazila]); // selectedDistrict এর ওপর ডিপেন্ড করার দরকার নেই
+    useEffect(() => {
+        if (selectedUpazila && selectedUpazila.value) {
+            setUpazilaAreaType("");
+            setValue("location.localBodyId", null);
+            axios.get(`http://localhost:5000/api/locations/local-bodies/${selectedUpazila.value}`)
+                .then(res => {
+                    setLocalBodies(res.data);
+                    const pourashavas = res.data.filter(lb => lb.type === 'Pourashava');
+                    if (pourashavas.length === 0) {
+                        setUpazilaAreaType("union");
+                    }
+                })
+                .catch(() => setLocalBodies([]));
+        } else {
+            setLocalBodies([]);
+        }
+    }, [selectedUpazila, setValue]);
+
+    // রেডিও বাটন চেঞ্জ হ্যান্ডলার
+    const handleDistrictAreaTypeChange = (e) => {
+        const value = e.target.value;
+        setDistrictAreaType(value);
+        setValue("location.upazilaId", null);
+        setUpazilaAreaType("");
+        
+        if (value === "cityCorporation" && cityCorporations.length === 1) {
+            setValue("location.localBodyId", { value: cityCorporations[0]._id, label: cityCorporations[0].name });
+        } else {
+            setValue("location.localBodyId", null);
+        }
+    };
+
+    const handleUpazilaAreaTypeChange = (e) => {
+        const value = e.target.value;
+        setUpazilaAreaType(value);
+        
+        if (value === "pourashava") {
+            const pourashavas = localBodies.filter(lb => lb.type === 'Pourashava');
+            if (pourashavas.length === 1) {
+                setValue("location.localBodyId", { value: pourashavas[0]._id, label: pourashavas[0].name });
+            } else {
+                setValue("location.localBodyId", null);
+            }
+        } else {
+            setValue("location.localBodyId", null);
+        }
+    };
 
     const handleSameAsMobile = (e) => {
         if (e.target.checked) {
@@ -338,43 +390,123 @@ useEffect(() => {
                                     />
                                 </div>
 
-                                <div className="form-control">
-                                    <label className="label"><span className="label-text font-medium">উপজেলা *</span></label>
-                                    <Controller
-                                        name="location.upazilaId"
-                                        control={control}
-                                        rules={{ required: true }}
-                                        render={({ field }) => (
-                                            <Select
-                                                {...field}
-                                                options={upazilas.map(u => ({ value: u._id, label: u.name }))}
-                                                isSearchable
-                                                placeholder="উপজেলা নির্বাচন করুন"
-                                                isDisabled={!selectedDistrict}
-                                                styles={selectStyles}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                {selectedDistrict && (
+                                    <div className="form-control">
+                                        <label className="label"><span className="label-text font-medium">এলাকার ধরন *</span></label>
+                                        <div className="flex gap-6">
+                                            <label className={`cursor-pointer flex items-center gap-2 ${cityCorporations.length === 0 ? 'opacity-50' : ''}`}>
+                                                <input type="radio" name="districtAreaType" value="cityCorporation" checked={districtAreaType === "cityCorporation"} onChange={handleDistrictAreaTypeChange} className="radio radio-primary radio-sm" disabled={cityCorporations.length === 0} />
+                                                <span className="font-medium">সিটি কর্পোরেশন {cityCorporations.length === 0 && <span className="text-xs text-error ml-1">(নেই)</span>}</span>
+                                            </label>
+                                            <label className="cursor-pointer flex items-center gap-2">
+                                                <input type="radio" name="districtAreaType" value="upazila" checked={districtAreaType === "upazila"} onChange={handleDistrictAreaTypeChange} className="radio radio-primary radio-sm" />
+                                                <span className="font-medium">উপজেলা</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
 
-                                <div className="form-control">
-                                    <label className="label"><span className="label-text font-medium">ইউনিয়ন/পৌরসভা *</span></label>
-                                    <Controller
-                                        name="location.localBodyId"
-                                        control={control}
-                                        rules={{ required: true }}
-                                        render={({ field }) => (
-                                            <Select
-                                                {...field}
-                                                options={localBodies.map(lb => ({ value: lb._id, label: `${lb.name} (${lb.type})` }))}
-                                                isSearchable
-                                                placeholder="ইউনিয়ন/পৌরসভা নির্বাচন করুন"
-                                                isDisabled={!selectedUpazila}
-                                                styles={selectStyles}
+                                {districtAreaType === "cityCorporation" && (
+                                    <div className="form-control">
+                                        <label className="label"><span className="label-text font-medium">সিটি কর্পোরেশন *</span></label>
+                                        <Controller
+                                            name="location.localBodyId"
+                                            control={control}
+                                            rules={{ required: true }}
+                                            render={({ field }) => (
+                                                <Select
+                                                    {...field}
+                                                    options={cityCorporations.map(c => ({ value: c._id, label: c.name }))}
+                                                    isSearchable
+                                                    placeholder="সিটি কর্পোরেশন নির্বাচন করুন"
+                                                    styles={selectStyles}
+                                                />
+                                            )}
+                                        />
+                                    </div>
+                                )}
+
+                                {districtAreaType === "upazila" && (
+                                    <>
+                                        <div className="form-control">
+                                            <label className="label"><span className="label-text font-medium">উপজেলা *</span></label>
+                                            <Controller
+                                                name="location.upazilaId"
+                                                control={control}
+                                                rules={{ required: true }}
+                                                render={({ field }) => (
+                                                    <Select
+                                                        {...field}
+                                                        options={upazilas.map(u => ({ value: u._id, label: u.name }))}
+                                                        isSearchable
+                                                        placeholder="উপজেলা নির্বাচন করুন"
+                                                        styles={selectStyles}
+                                                    />
+                                                )}
                                             />
+                                        </div>
+
+                                        {selectedUpazila && (
+                                            <div className="form-control mt-2">
+                                                <label className="label"><span className="label-text font-medium">পৌরসভা নাকি ইউনিয়ন? *</span></label>
+                                                <div className="flex gap-6">
+                                                    <label className={`cursor-pointer flex items-center gap-2 ${localBodies.filter(lb => lb.type === 'Pourashava').length === 0 ? 'opacity-50' : ''}`}>
+                                                        <input type="radio" name="upazilaAreaType" value="pourashava" checked={upazilaAreaType === "pourashava"} onChange={handleUpazilaAreaTypeChange} className="radio radio-primary radio-sm" disabled={localBodies.filter(lb => lb.type === 'Pourashava').length === 0} />
+                                                        <span className="font-medium">পৌরসভা {localBodies.filter(lb => lb.type === 'Pourashava').length === 0 && <span className="text-xs text-error ml-1">(নেই)</span>}</span>
+                                                    </label>
+                                                    <label className="cursor-pointer flex items-center gap-2">
+                                                        <input type="radio" name="upazilaAreaType" value="union" checked={upazilaAreaType === "union"} onChange={handleUpazilaAreaTypeChange} className="radio radio-primary radio-sm" />
+                                                        <span className="font-medium">ইউনিয়ন</span>
+                                                    </label>
+                                                </div>
+                                            </div>
                                         )}
-                                    />
-                                </div>
+
+                                        {upazilaAreaType === "pourashava" && (
+                                            <div className="form-control">
+                                                <label className="label"><span className="label-text font-medium">পৌরসভা *</span></label>
+                                                {localBodies.filter(lb => lb.type === 'Pourashava').length === 0 ? (
+                                                    <div className="text-red-500 mt-2 text-sm font-medium">এই উপজেলার কোনো পৌরসভা নেই।</div>
+                                                ) : (
+                                                    <Controller
+                                                        name="location.localBodyId"
+                                                        control={control}
+                                                        rules={{ required: true }}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                options={localBodies.filter(lb => lb.type === 'Pourashava').map(lb => ({ value: lb._id, label: lb.name }))}
+                                                                isSearchable
+                                                                placeholder="পৌরসভা নির্বাচন করুন"
+                                                                styles={selectStyles}
+                                                            />
+                                                        )}
+                                                    />
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {upazilaAreaType === "union" && (
+                                            <div className="form-control">
+                                                <label className="label"><span className="label-text font-medium">ইউনিয়ন *</span></label>
+                                                <Controller
+                                                    name="location.localBodyId"
+                                                    control={control}
+                                                    rules={{ required: true }}
+                                                    render={({ field }) => (
+                                                        <Select
+                                                            {...field}
+                                                            options={localBodies.filter(lb => lb.type === 'Union').map(lb => ({ value: lb._id, label: lb.name }))}
+                                                            isSearchable
+                                                            placeholder="ইউনিয়ন নির্বাচন করুন"
+                                                            styles={selectStyles}
+                                                        />
+                                                    )}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
 
                                 <div className="form-control">
                                     <label className="label"><span className="label-text font-medium">ওয়ার্ড নাম্বার *</span></label>
